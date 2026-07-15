@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+test('renders the empty-state hero and side panel', () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(screen.getByText(/meet someone new/i)).toBeInTheDocument();
+  expect(screen.getByText(/new random chat/i)).toBeInTheDocument();
+  expect(screen.getByText(/feedback board/i)).toBeInTheDocument();
 });

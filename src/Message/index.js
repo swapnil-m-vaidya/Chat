@@ -1,53 +1,63 @@
-import React, { useState } from 'react';
+import React from 'react';
+import styles from './styles.module.css';
 
-import styles from './styles.module.css'
+const formatTime = (ts) =>
+  ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
-const Message = ({ type, text,setliked,liked }) => {
+// Likes live on the message object itself (persisted with the conversation),
+// so they survive chat switches and reloads.
+const Message = ({ message, persona, onLike }) => {
+  const { id, type, text, liked, time } = message;
 
-console.log(liked,"liked");
-  const [isLiked, setIsLiked] = useState(liked===true);
-  const [isDisliked, setIsDisliked] = useState(liked===false);
-
-  if(type==="user"){
-    return(
-        <div className={styles.main}>
-            <div className={styles.userinfo}><div className={styles.circle}>S</div><span className={styles.yourinfo}>You</span></div>
-            <div className={styles.text}>{text}</div>
+  if (type === 'user') {
+    return (
+      <div className={`${styles.row} ${styles.rowUser}`}>
+        <div className={styles.bubblewrap}>
+          <div className={`${styles.bubble} ${styles.bubbleUser}`}>{text}</div>
+          <div className={`${styles.time} ${styles.timeUser}`}>{formatTime(time)}</div>
         </div>
-    )
-}
-else if(type==='bot'){
-    return(
-        <div className={styles.main}>
-            <div className={styles.userinfo}><div className={styles.circle}>A</div><span className={styles.yourinfo}>Bot</span></div>
-            <div className={styles.text}>{text}  <div className={styles.thumbs_container}>
-    <button
-      onClick={() => {
-        setIsLiked(true);
-        setliked(true)
-        setIsDisliked(false);
-      }}
-      className={isLiked ? styles.active : ''}
-    >
-      <i className="fa fa-thumbs-up"></i>
-    </button>
-    <button
-      onClick={() => {
-        setIsLiked(false);
-        setliked(false)
-        setIsDisliked(true);
-      }}
-      className={isDisliked ? styles.active : ''}
-    >
-      <i className="fa fa-thumbs-down"></i>
-    </button>
-  </div></div>
-        </div>
-    )
-}
-  else {
-    return null
+        <span className={`${styles.avatar} ${styles.avatarUser}`}>🙂</span>
+      </div>
+    );
   }
+
+  if (type === 'bot') {
+    return (
+      <div className={styles.row}>
+        <span className={styles.avatar} style={{ background: `${persona.color}22` }}>
+          {persona.emoji}
+        </span>
+        <div className={styles.bubblewrap}>
+          <div className={`${styles.bubble} ${styles.bubbleBot}`}>
+            {text}
+            <div className={`${styles.thumbs} ${liked !== null ? styles.thumbsPinned : ''}`}>
+              <button
+                type="button"
+                title="Good response"
+                className={liked === true ? styles.thumbActive : styles.thumb}
+                onClick={() => onLike(id, true)}
+              >
+                👍
+              </button>
+              <button
+                type="button"
+                title="Bad response"
+                className={liked === false ? styles.thumbActive : styles.thumb}
+                onClick={() => onLike(id, false)}
+              >
+                👎
+              </button>
+            </div>
+          </div>
+          <div className={styles.time}>
+            {persona.name} · {formatTime(time)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 };
 
 export default Message;
