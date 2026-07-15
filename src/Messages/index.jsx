@@ -1,7 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { memo, useEffect, useRef } from 'react';
 import Message from '../Message';
 import styles from './styles.module.css';
 
+// Memoized: props only change when a message arrives or a like toggles,
+// so keystrokes in the chat input skip this whole subtree.
 function Messages({ messages = [], persona, typing, onLike }) {
   const bottomRef = useRef(null);
 
@@ -31,4 +33,4 @@ function Messages({ messages = [], persona, typing, onLike }) {
   );
 }
 
-export default Messages;
+export default memo(Messages);

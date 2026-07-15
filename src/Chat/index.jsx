@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import uuid from 'react-uuid';
+import React, { useCallback, useState } from 'react';
 import Messages from '../Messages';
 import { getBotReply, getPersona, getSurprisePrompt, typingDelay, PERSONAS } from '../bot';
+import { newId } from '../utils/id';
 import styles from './styles.module.css';
 
 function Chat({ chat, conversation, updateConversation, renameChat, onNewChat }) {
@@ -29,7 +29,7 @@ function Chat({ chat, conversation, updateConversation, renameChat, onNewChat })
 
     const chatId = chat.id;
     const isFirstUserMessage = !conversation.messages.some((m) => m.type === 'user');
-    appendMessage(chatId, { id: uuid(), type: 'user', text, time: Date.now() });
+    appendMessage(chatId, { id: newId(), type: 'user', text, time: Date.now() });
     if (isFirstUserMessage) {
       renameChat(chatId, text.length > 30 ? `${text.slice(0, 30)}…` : text);
     }
@@ -38,10 +38,10 @@ function Chat({ chat, conversation, updateConversation, renameChat, onNewChat })
 
     const { text: replyText, followUp } = getBotReply(text, chat.persona);
     setTimeout(() => {
-      appendMessage(chatId, { id: uuid(), type: 'bot', text: replyText, liked: null, time: Date.now() });
+      appendMessage(chatId, { id: newId(), type: 'bot', text: replyText, liked: null, time: Date.now() });
       if (followUp) {
         setTimeout(() => {
-          appendMessage(chatId, { id: uuid(), type: 'bot', text: followUp, liked: null, time: Date.now() });
+          appendMessage(chatId, { id: newId(), type: 'bot', text: followUp, liked: null, time: Date.now() });
           setTyping(false);
         }, typingDelay());
       } else {
@@ -50,14 +50,21 @@ function Chat({ chat, conversation, updateConversation, renameChat, onNewChat })
     }, typingDelay());
   };
 
-  const handleLike = (messageId, value) => {
-    updateConversation(chat.id, (c) => ({
-      ...c,
-      messages: c.messages.map((m) =>
-        m.id === messageId ? { ...m, liked: m.liked === value ? null : value } : m
-      ),
-    }));
-  };
+  // Stable identity so the memoized Messages subtree skips re-renders
+  // while the user is typing in the input.
+  const chatId = chat?.id;
+  const handleLike = useCallback(
+    (messageId, value) => {
+      if (!chatId) return;
+      updateConversation(chatId, (c) => ({
+        ...c,
+        messages: c.messages.map((m) =>
+          m.id === messageId ? { ...m, liked: m.liked === value ? null : value } : m
+        ),
+      }));
+    },
+    [chatId, updateConversation]
+  );
 
   const handleShare = () => {
     const lines = conversation.messages.map(

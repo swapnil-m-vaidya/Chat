@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
-import uuid from 'react-uuid';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import Chat from './Chat';
 import SidePanel from './SidePanel';
-import FeedbackBoard from './FeedbackBoard';
 import { randomPersona, getIcebreaker } from './bot';
+import { newId } from './utils/id';
 import styles from './styles.module.css';
+
+// Code-split: the feedback board only loads when someone opens it.
+const FeedbackBoard = lazy(() => import('./FeedbackBoard'));
 
 const STORAGE_KEY = 'random-chat-state-v1';
 
@@ -27,12 +29,12 @@ function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const createChat = () => {
-    const id = uuid();
+  const createChat = useCallback(() => {
+    const id = newId();
     const persona = randomPersona();
     const chat = { id, name: 'New chat', persona: persona.id, createdAt: Date.now() };
     const opener = {
-      id: uuid(),
+      id: newId(),
       type: 'bot',
       text: getIcebreaker(persona.id),
       liked: null,
@@ -47,31 +49,39 @@ function App() {
     }));
     setActiveId(id);
     setView('chat');
-  };
+  }, []);
 
-  const deleteChat = (id) => {
+  const deleteChat = useCallback((id) => {
     setState((s) => {
       const { [id]: removed, ...rest } = s.conversations;
       return { chats: s.chats.filter((c) => c.id !== id), conversations: rest };
     });
-    if (activeId === id) setActiveId(null);
-  };
+    setActiveId((prev) => (prev === id ? null : prev));
+  }, []);
 
-  const renameChat = (id, name) => {
+  const renameChat = useCallback((id, name) => {
     setState((s) => ({
       ...s,
       chats: s.chats.map((c) => (c.id === id ? { ...c, name } : c)),
     }));
-  };
+  }, []);
 
-  // updater receives the current conversation and returns the next one
-  const updateConversation = (id, updater) => {
+  // updater receives the current conversation and returns the next one.
+  // Stable identity so memoized children can skip re-renders.
+  const updateConversation = useCallback((id, updater) => {
     setState((s) => {
       const current = s.conversations[id];
       if (!current) return s;
       return { ...s, conversations: { ...s.conversations, [id]: updater(current) } };
     });
-  };
+  }, []);
+
+  const selectChat = useCallback((id) => {
+    setActiveId(id);
+    setView('chat');
+  }, []);
+
+  const showFeedback = useCallback(() => setView('feedback'), []);
 
   const activeChat = state.chats.find((c) => c.id === activeId) || null;
 
@@ -84,17 +94,16 @@ function App() {
           activeId={view === 'chat' ? activeId : null}
           view={view}
           onNewChat={createChat}
-          onSelectChat={(id) => {
-            setActiveId(id);
-            setView('chat');
-          }}
+          onSelectChat={selectChat}
           onDeleteChat={deleteChat}
-          onShowFeedback={() => setView('feedback')}
+          onShowFeedback={showFeedback}
         />
       </div>
       <div className={styles.rightpanel}>
         {view === 'feedback' ? (
-          <FeedbackBoard chats={state.chats} conversations={state.conversations} />
+          <Suspense fallback={null}>
+            <FeedbackBoard chats={state.chats} conversations={state.conversations} />
+          </Suspense>
         ) : (
           <Chat
             key={activeId}

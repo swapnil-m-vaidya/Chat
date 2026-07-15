@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import styles from './styles.module.css';
 
 const formatTime = (ts) =>
@@ -60,4 +60,5 @@ const Message = ({ message, persona, onLike }) => {
   return null;
 };
 
-export default Message;
+// Memoized: only the row whose message object changed re-renders.
+export default memo(Message);
